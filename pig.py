@@ -1,3 +1,4 @@
+from time import perf_counter
 import argparse
 import random
 random.seed(0)
@@ -8,6 +9,7 @@ class Player:
         self._score = 0
         self._turn_total = 0
         self._temp_score = self._score + self._turn_total
+        self._is_computer = False
 
     def __repr__(self):
         return f'{0}({1}, {2}, {3})'.format(
@@ -27,6 +29,10 @@ class Player:
     def temp_score(self):
         return self._temp_score
 
+    @property
+    def is_computer(self):
+        return self._is_computer
+
     def roll(self, die):
         die.roll_die()
         if die.face == 1:
@@ -43,11 +49,44 @@ class Player:
 
 
 class ComputerPlayer(Player):
-    pass
+    def __init__(self):
+        super().__init__()
+        self._is_computer = True
+        self._decision = None
+
+    @property
+    def decision(self):
+        ComputerPlayer._strategy(self)
+        return self._decision
+
+    def _strategy(self):
+        if 25 > 100 - self._temp_score:
+            self._decision = 'h'
+        else:
+            self._decision = 'r'
 
 
 class PlayerFactory:
-    pass
+    @staticmethod
+    def validate_input(p):
+        if p not in {'human', 'computer'}:
+            print(f"A player must be either a 'human' or 'computer'")
+            quit()
+
+    def __init__(self, p1, p2):
+        PlayerFactory.validate_input(p1)
+        PlayerFactory.validate_input(p2)
+        self._p1 = p1
+        self._p2 = p2
+
+    def p_list(self):
+        pl = []
+        for p in (self._p1, self._p2):
+            if p == 'human':
+                pl.append(Player())
+            elif p == 'computer':
+                pl.append(ComputerPlayer())
+        return pl
 
 
 class Die:
@@ -84,16 +123,18 @@ class Game:
         print('')
 
     def _print_all_info_after_roll(self, player_idx):
-        print(f'rolling number: {self._die.face}')
-        print(f'turn total: {self._players[player_idx].turn_total}')
+        print(f'Player {player_idx + 1} '
+              f'rolling number: {self._die.face}')
+        print(f'Player {player_idx + 1} '
+              f'turn total: {self._players[player_idx].turn_total}')
         Game.print_scores(self)
 
     @staticmethod
     def _ask_player_for_decision(player_idx):
-        deci = None
-        while deci not in {'r', 'h'}:
-            deci = input(f"Player {player_idx + 1} Roll or HOLD: ")
-        return deci
+        decision = None
+        while decision not in {'r', 'h'}:
+            decision = input(f"Player {player_idx + 1} Roll or HOLD: ")
+        return decision
 
     def _roll_route(self, player_idx):
         self._players[player_idx].roll(self._die)
@@ -116,11 +157,13 @@ class Game:
         return None
 
     def turn(self, player_idx):
-        decision = Game._ask_player_for_decision(player_idx)
+        if self._players[player_idx].is_computer:
+            decision = self._players[player_idx].decision
+        else:
+            decision = Game._ask_player_for_decision(player_idx)
 
         if decision == 'r':
             Game._roll_route(self, player_idx)
-
         elif decision == 'h':
             Game._hold_route(self, player_idx)
 
@@ -129,34 +172,68 @@ class Game:
         return Game._winner
 
 
-def main(num_players, num_games):
-    num_players, num_games = num_players or 2, num_games or 1
+class TimedGameProxy(Game):
+    _start_time = perf_counter()
 
-    for _ in range(num_games):
-        print('*' * 25)
-        print('The Game of Pig', end='\n\n')
+    def __init__(self, players, die, is_timed):
+        super().__init__(players, die)
+        self._is_timed = is_timed
 
-        players = [Player() for _ in range(num_players)]
-        die = Die()
-        game = Game(players, die)
+    def time_up_winner(self):
+        if self._players[0].score > self._players[1].score:
+            Game._winner = 1
+        elif self._players[0].score > self._players[1].score:
+            Game._winner = 2
+        else:
+            print("It's an even game", end='\n\n')
+            super().print_scores()
+            quit()
 
-        playing = True
-        while playing:
-            for player_idx in range(len(players)):
-                game.turn(player_idx)
-                game.print_scores()
+    def turn(self, player_idx):
+        if self._players[player_idx].is_computer:
+            decision = self._players[player_idx].decision
+        else:
+            decision = super()._ask_player_for_decision(player_idx)
 
-                if game.winner:
-                    print(f'Player {game.winner} has won!')
-                    playing = False
-                    break
+        current_time = perf_counter()
+        if self._is_timed and \
+                current_time - TimedGameProxy._start_time > 60:
+            print("One minute has run out!!!")
+            TimedGameProxy.time_up_winner(self)
+            return None
+        elif decision == 'r':
+            super()._roll_route(player_idx)
+        elif decision == 'h':
+            super()._hold_route(player_idx)
+
+
+def main(player1, player2, is_timed):
+    players = PlayerFactory(player1, player2).p_list()
+    die = Die()
+    game = TimedGameProxy(players, die, is_timed)
+
+    print('*' * 25)
+    print('The Game of Pig', end='\n\n')
+
+    playing = True
+    while playing:
+        for player_idx in range(len(players)):
+            game.turn(player_idx)
+            game.print_scores()
+
+            if game.winner:
+                print(f'Player {game.winner} has won!')
+                playing = False
+                break
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--numPlayers", help="number of players",
-                        type=int)
-    parser.add_argument("--numGames", help="number of games",
-                        type=int)
+    parser.add_argument("--player1", help="'human' or 'computer'",
+                        type=str, required=True)
+    parser.add_argument("--player2", help="'human' or 'computer'",
+                        type=str, required=True)
+    parser.add_argument("--timed", help="activate one minute timer",
+                        action='store_true')
     args = parser.parse_args()
-    main(args.numPlayers, args.numGames)
+    main(args.player1, args.player2, args.timed)
