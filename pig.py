@@ -8,14 +8,13 @@ class Player:
     def __init__(self):
         self._score = 0
         self._turn_total = 0
-        self._temp_score = self._score + self._turn_total
         self._is_computer = False
 
     def __repr__(self):
         return f'{0}({1}, {2}, {3})'.format(
             self.__class__.__name__,
             self._score, self._turn_total,
-            self._temp_score)
+            self.temp_score)
 
     @property
     def score(self):
@@ -27,7 +26,8 @@ class Player:
 
     @property
     def temp_score(self):
-        return self._temp_score
+        temp_score = self._score + self._turn_total
+        return temp_score
 
     @property
     def is_computer(self):
@@ -60,7 +60,7 @@ class ComputerPlayer(Player):
         return self._decision
 
     def _strategy(self):
-        if 25 > 100 - self._temp_score:
+        if 25 > 100 - self.temp_score:
             self._decision = 'h'
         else:
             self._decision = 'r'
