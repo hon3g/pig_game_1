@@ -10,12 +10,6 @@ class Player:
         self._turn_total = 0
         self._is_computer = False
 
-    def __repr__(self):
-        return f'{0}({1}, {2}, {3})'.format(
-            self.__class__.__name__,
-            self._score, self._turn_total,
-            self.temp_score)
-
     @property
     def score(self):
         return self._score
@@ -79,6 +73,10 @@ class PlayerFactory:
         self._p1 = p1
         self._p2 = p2
 
+    def __repr__(self):
+        return f'{0}({1}, {2})'.format(self.__class__.__name__,
+                                       self._p1, self._p2)
+
     def p_list(self):
         pl = []
         for p in (self._p1, self._p2):
@@ -92,9 +90,6 @@ class PlayerFactory:
 class Die:
     def __init__(self):
         self._face = None
-
-    def __repr__(self):
-        return f'{self.__class__.__name__}()'
 
     @property
     def face(self):
@@ -112,10 +107,8 @@ class Game:
         self._die = die
 
     def __repr__(self):
-        return f'{0}({1}, {2})'.format(
-            self.__class__.__name__,
-            self._players,
-            self._die)
+        return f'{0}({1}, {2})'.format(self.__class__.__name__,
+                                       self._players, self._die)
 
     def print_scores(self):
         for i in range(len(self._players)):
@@ -178,6 +171,11 @@ class TimedGameProxy(Game):
     def __init__(self, players, die, is_timed):
         super().__init__(players, die)
         self._is_timed = is_timed
+
+    def __repr__(self):
+        return f'{0}({1}, {2}, {3})'.format(self.__class__.__name__,
+                                            self._players, self._die,
+                                            self._is_timed)
 
     def time_up_winner(self):
         if self._players[0].score > self._players[1].score:
