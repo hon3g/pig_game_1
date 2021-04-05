@@ -60,7 +60,7 @@ class ComputerPlayer(Player):
         return self._decision
 
     def _strategy(self):
-        if 25 > 100 - self.temp_score:
+        if self._turn_total > min(25, 100 - self.temp_score):
             self._decision = 'h'
         else:
             self._decision = 'r'
